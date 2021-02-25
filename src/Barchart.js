@@ -32,15 +32,20 @@ const drawChart = (data, bin) => {
 		.attr("height", height + margin.top + margin.bottom)
 		.append("g")
 		.attr("transform",
-		  "translate(" + margin.left + "," + margin.top + ")"); 
+		  "translate(" + margin.left + "," + margin.top + ")");
 
     //Parses CSV file dates
     data.forEach((d) => {
     	d.date = parseDate(d["DateOfDeath"]);
-    }); 
+    });
 
     //Scaler for the Y axis, bounds defined later
 	var yScale = d3.scaleLinear()
+		.range([height,0])
+		.nice();
+
+		//Scaler for the Y axis, bounds defined later /*added
+	var yScale2 = d3.scaleLinear()
 		.range([height,0])
 		.nice();
 
@@ -49,16 +54,17 @@ const drawChart = (data, bin) => {
 	var xScale = d3.scaleTime()
 		.domain(dateExtent)
 		.range([0,width])
-		.nice(); 
+		.nice();
 
-	//Empty divs to be populated in update()
+	//Empty divs to be populated in update() /*added
     var yAxis = svg.append("g");
+		var yAxis2 = svg.append("g");
     var xAxis = svg.append("g");
 
     //Label for the X Axis
-    svg.append("text")             
+    svg.append("text")
 	    .attr("transform",
-	            "translate(" + (width/2) + " ," + 
+	            "translate(" + (width/2) + " ," +
 	                           (height + margin.top + 20) + ")")
 	    .style("text-anchor", "middle")
 	    .text("Date");
@@ -70,7 +76,16 @@ const drawChart = (data, bin) => {
       .attr("x",0 - (height / 2))
       .attr("dy", "1em")
       .style("text-anchor", "middle")
-      .text("Total Number of Deaths"); 
+      .text("Total Number of Deaths 2");
+
+	//Lable for the right Y Axis *added
+	svg.append("text")
+			.attr("transform", "rotate(-90)")
+			.attr("y", 0 - margin.left)
+			.attr("x",0 - (height / 2))
+			.attr("dy", "1em")
+			.style("text-anchor", "middle")
+			.text("Average Age of Death");
 
     //Grouping div for bars
     var bars = svg.append("g");
@@ -80,17 +95,17 @@ const drawChart = (data, bin) => {
 		.attr("id", "meanLine");
 
 	//TickManner: Interval for histogram binning
-	let tickManner; 
+	let tickManner;
 	switch(bin.toLowerCase()) {
 		case "month":
-			tickManner = d3.timeMonth; 
-			break; 
+			tickManner = d3.timeMonth;
+			break;
 		case "week":
 			tickManner = d3.timeWeek;
-			break;  
+			break;
 		case "day":
-			tickManner = d3.timeDay; 
-			break; 
+			tickManner = d3.timeDay;
+			break;
 	}
 
 	//Histogram Settings
@@ -106,11 +121,21 @@ const drawChart = (data, bin) => {
     var deathExtent = d3.extent(histData, (d) => d.length);
     yScale.domain([0,deathExtent[1]]);
 
+		//Sets bounds for  right Y Scale *added
+    var avgExtent = d3.extent(histData, (d) => d.length);
+    yScale.domain([0,avgExtent[1]]);
+
     //Propogates Y Axis
     yAxis
     	.transition()
     	.duration(1000)
     	.call(d3.axisLeft(yScale));
+
+			//Propogates right Y Axis *added
+	    yAxis2
+	    	.transition()
+	    	.duration(1000)
+	    	.call(d3.axisRight(yScale));
 
     //Propogates X Axis
     xAxis
@@ -119,19 +144,19 @@ const drawChart = (data, bin) => {
 
 	//Selects existing bars
 	var allBars  = bars.selectAll("rect")
-		.data(histData); 
+		.data(histData);
 
 	//Transitions + adds additional bars
 	allBars.enter()
 		.append("rect")
-		//Mouseover function for text box and color shift. 
+		//Mouseover function for text box and color shift.
 		.on("mouseover", (d, i)=>{
 			//Manipulates Text Box
-			var allData = "Total Deaths from " + formatDay(d.x0) + " to " + formatDay(d.x1) +": "+ d.length + "<br/>" + "<br/>"; 
+			var allData = "Total Deaths from " + formatDay(d.x0) + " to " + formatDay(d.x1) +": "+ d.length + "<br/>" + "<br/>";
 			for (var i = 0; i < d.length; i++){
 			 	allData += textFormat(d[i].DeceasedFirstName) + " " + textFormat(d[i].DeceasedLastName) + " " + d[i].DateOfDeath + "<br/>";
 			}
-			d3.select("div.textbox").style("opacity", .9).html(allData); 	
+			d3.select("div.textbox").style("opacity", .9).html(allData);
 
 			//Changes Color
 			d3.select(event.currentTarget)
@@ -156,11 +181,11 @@ const drawChart = (data, bin) => {
     	.duration(1000)
 		.attr("y", d => yScale(d.length))
         .attr("height", d => height - yScale(d.length));
-    
+
     //Removes excess bars
     allBars.exit().remove();
 
-    //Removes existing mean line 
+    //Removes existing mean line
     meanLine.selectAll("line").remove();
 
     //Draws new mean line

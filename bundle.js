@@ -89,15 +89,20 @@
   		.attr("height", height + margin.top + margin.bottom)
   		.append("g")
   		.attr("transform",
-  		  "translate(" + margin.left + "," + margin.top + ")"); 
+  		  "translate(" + margin.left + "," + margin.top + ")");
 
       //Parses CSV file dates
       data.forEach(function (d) {
       	d.date = parseDate(d["DateOfDeath"]);
-      }); 
+      });
 
       //Scaler for the Y axis, bounds defined later
   	var yScale = d3__default['default'].scaleLinear()
+  		.range([height,0])
+  		.nice();
+
+      //Scaler for the right Y axis, bounds defined later
+  	var yScale2 = d3.scaleLinear()
   		.range([height,0])
   		.nice();
 
@@ -106,28 +111,38 @@
   	var xScale = d3__default['default'].scaleTime()
   		.domain(dateExtent)
   		.range([0,width])
-  		.nice(); 
+  		.nice();
 
   	//Empty divs to be populated in update()
       var yAxis = svg.append("g");
+      var yAxis2 = svg.append("g");
       var xAxis = svg.append("g");
 
       //Label for the X Axis
-      svg.append("text")             
+      svg.append("text")
   	    .attr("transform",
-  	            "translate(" + (width/2) + " ," + 
+  	            "translate(" + (width/2) + " ," +
   	                           (height + margin.top + 20) + ")")
   	    .style("text-anchor", "middle")
   	    .text("Date");
 
-  	//Lable for the Y Axis
+  	//Label for the Y Axis
   	svg.append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", 0 - margin.left)
         .attr("x",0 - (height / 2))
         .attr("dy", "1em")
         .style("text-anchor", "middle")
-        .text("Total Number of Deaths"); 
+        .text("Total Number of Deaths");
+
+    //Label for the right Y Axis
+  	svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 0 + width)
+        .attr("x",0 - (height / 2))
+        .attr("dy", "1em")
+        .style("text-anchor", "middle")
+        .text("Average Age of Deaths");
 
       //Grouping div for bars
       var bars = svg.append("g");
@@ -137,17 +152,17 @@
   		.attr("id", "meanLine");
 
   	//TickManner: Interval for histogram binning
-  	var tickManner; 
+  	var tickManner;
   	switch(bin.toLowerCase()) {
   		case "month":
-  			tickManner = d3__default['default'].timeMonth; 
-  			break; 
+  			tickManner = d3__default['default'].timeMonth;
+  			break;
   		case "week":
   			tickManner = d3__default['default'].timeWeek;
-  			break;  
+  			break;
   		case "day":
-  			tickManner = d3__default['default'].timeDay; 
-  			break; 
+  			tickManner = d3__default['default'].timeDay;
+  			break;
   	}
 
   	//Histogram Settings
@@ -163,11 +178,23 @@
       var deathExtent = d3__default['default'].extent(histData, function (d) { return d.length; });
       yScale.domain([0,deathExtent[1]]);
 
+      //Sets bounds for right Y Scale
+      var avgExtent = d3__default['default'].extent(histData, function (d) { return d.length; });
+      yScale.domain([0,deathExtent[1]]);
+      console.log(histData)
+
       //Propogates Y Axis
       yAxis
       	.transition()
       	.duration(1000)
       	.call(d3__default['default'].axisLeft(yScale));
+
+      //Propogates right Y axis
+      yAxis2
+      	.transition()
+      	.duration(1000)
+        .attr("transform", ("translate(" + width + ", 0 )"))
+      	.call(d3__default['default'].axisRight(yScale));
 
       //Propogates X Axis
       xAxis
@@ -176,19 +203,19 @@
 
   	//Selects existing bars
   	var allBars  = bars.selectAll("rect")
-  		.data(histData); 
+  		.data(histData);
 
   	//Transitions + adds additional bars
   	allBars.enter()
   		.append("rect")
-  		//Mouseover function for text box and color shift. 
+  		//Mouseover function for text box and color shift.
   		.on("mouseover", function (d, i){
   			//Manipulates Text Box
-  			var allData = "Total Deaths from " + formatDay(d.x0) + " to " + formatDay(d.x1) +": "+ d.length + "<br/>" + "<br/>"; 
+  			var allData = "Total Deaths from " + formatDay(d.x0) + " to " + formatDay(d.x1) +": "+ d.length + "<br/>" + "<br/>";
   			for (var i = 0; i < d.length; i++){
   			 	allData += textFormat(d[i].DeceasedFirstName) + " " + textFormat(d[i].DeceasedLastName) + " " + d[i].DateOfDeath + "<br/>";
   			}
-  			d3__default['default'].select("div.textbox").style("opacity", .9).html(allData); 	
+  			d3__default['default'].select("div.textbox").style("opacity", .9).html(allData);
 
   			//Changes Color
   			d3__default['default'].select(event.currentTarget)
@@ -213,11 +240,11 @@
       	.duration(1000)
   		.attr("y", function (d) { return yScale(d.length); })
           .attr("height", function (d) { return height - yScale(d.length); });
-      
+
       //Removes excess bars
       allBars.exit().remove();
 
-      //Removes existing mean line 
+      //Removes existing mean line
       meanLine.selectAll("line").remove();
 
       //Draws new mean line
@@ -252,7 +279,7 @@
   	var ranges = ["month", "week", "day"];
 
   	var text = null;
-  	
+
   	var ref$1 = React$1.useState("month");
   	var bin = ref$1[0];
   	var setBin = ref$1[1];
